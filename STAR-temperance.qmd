@@ -13,7 +13,8 @@ library(gt)
 library(tidymodels)     
 library(broom)          
 library(marginaleffects) 
-library(easystats)   
+library(easystats)  
+library(ggplot2) 
 
 x <- read_csv("https://raw.githubusercontent.com/PPBDS/bootcamp/refs/heads/master/_internal/data/STAR.csv",
               show_col_types = FALSE) |> 
@@ -169,16 +170,56 @@ tibble(
 Fit a linear regression model in which math score (`g4math`) is the outcome, and the predictors are class type (`kind`), race, and years spent in small classes (`yearssmall`). Fit this model to an object named `fit_cs`.
 
 ```{r}
+fit_cs <- linear_reg() |> 
+  fit(g4math ~ kind + yearssmall, data = x) 
 
+fit_cs2 <- linear_reg() |> 
+  fit(g4math ~ kind + yearssmall + race, data = x) 
 ```
 
 After fitting the model, run `fit_cs` and be sure to display the confidence intervals. 
 
 ```{r}
+fit_cs |>
+tidy(conf.int = TRUE)
+
+fit_cs2 |>
+tidy(conf.int = TRUE)
 
 ```
 
 Give the R code you used to fit your regression model to AI and ask it to create a LaTeX version of the regression equation that matches your model. Paste the LaTeX equation from AI below.
+$$
+\text{g4math}_i = \beta_0 + \beta_1 \cdot \text{kind}_i + \beta_2 \cdot \text{yearssmall}_i + \varepsilon_i
+$$
+
+## Linear Regression Equation 1:
+
+The estimated regression model is:
+
+$$
+\text{G4Math}_i = 709.52 - 1.89 \cdot \text{Kind}_{\text{regularAid},i} - 0.34 \cdot \text{Kind}_{\text{small},i} + 1.23 \cdot \text{YearsSmall}_i + \varepsilon_i
+$$
+
+Where:
+
+- $\text{Kind}_{\text{regularAid},i}$ and $\text{Kind}_{\text{small},i}$ are indicator variables,
+- $\text{YearsSmall}_i$ is the number of years spent in a small class,
+- $\varepsilon_i$ is the error term.
+
+## Regression Equation 2:
+
+The following equation represents the fitted linear regression model:
+
+$$
+\text{G4Math}_i = 695.2 + 2.1 \cdot \text{Kind}_{\text{small},i} + 5.4 \cdot \text{Race}_{\text{white},i} - 1.3 \cdot (\text{Kind}_{\text{small},i} \times \text{Race}_{\text{white},i}) + \varepsilon_i
+$$
+
+Where:
+
+- $\text{Kind}_{\text{small},i}$ is an indicator for being in a small class,
+- $\text{Race}_{\text{white},i}$ is an indicator for being white,
+- $\varepsilon_i$ is the error term.
 
 
 ## Marginal Effects
@@ -191,22 +232,67 @@ Generate predictions by class type (`kind`).
 
 Visualize average predicted math score by class type using `plot_predictions()`.
 
-
+```{r}
+plot_predictions(fit_cs, by = "kind")
+```
 The default `plot_predictions()` plots can be boring or hard to read. To create your own custom plot, start by extracting the prediction data using the `draw = FALSE` option. Save the resulting tibble as `pred_data`. Run `pred_data` to see the output.
+
+```{r}
+pred_data <- plot_predictions(fit_cs, by = "kind", draw = FALSE)
+```
 
 Give AI the output of `pred_data` and ask it to make a nice looking plot. Make sure that it has an accurate title, subtitle, axis labels, and caption. Paste your plot in the code chunk below.
 
+```{r}
+
+# Plot
+ggplot(pred_data, aes(x = kind, y = estimate)) +
+  geom_point(size = 3, color = "blue") +
+  geom_errorbar(aes(ymin = conf.low, ymax = conf.high), width = 0.2, color = "darkgray") +
+  labs(
+    title = "Regression Estimates with 95% Confidence Intervals",
+    x = "School Type (kind)",
+    y = "Estimated G4 Math Score"
+  ) +
+  theme_minimal()
+```
 
 What does this plot tell you about the effect of class types on student `g4math` scores?
 
 
 Start experimenting with more detailed plots. Visualize predicted math scores by class type and race. Just use the basic `plot_predictions()` for now.
 
+```{r}
+pred_data2 <- plot_predictions(fit_cs2, by = c("kind", "race"), draw = FALSE)
+```
 
 Now use `plot_predictions()` with `draw = FALSE` to get the raw predictions by class type. Save the resulting tibble as `pred_data2`. Run `pred_data2` to see the output. 
 
 
 Take the output from `pred_data2` and provide it to AI. Ask it to make a high-quality plot with a descriptive title, subtitle, caption, and labels. Paste your new plot below: 
+
+```{r}
+ggplot(pred_data2, aes(x = kind, y = estimate, color = race)) +
+  geom_point(size = 3) +
+  geom_errorbar(aes(ymin = conf.low, ymax = conf.high), width = 0.2) +
+  scale_color_manual(values = c("black" = "#e41a1c", "others" = "#4daf4a", "white" = "#377eb8")) +
+  labs(
+    title = "Estimated 4th Grade Math Scores by School Type and Race",
+    subtitle = "Regular and small size does not matter ",
+    x = "Class Type (Kind)",
+    y = "Estimated Math Score (G4Math)",
+    color = "Race",
+    caption = "Source: Tennessee schools Experiment"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    plot.title = element_text(face = "bold", size = 18),
+    plot.subtitle = element_text(size = 14, margin = margin(b = 10)),
+    plot.caption = element_text(size = 10, color = "gray40", hjust = 0),
+    axis.text.x = element_text(angle = 15, hjust = 1),
+    legend.position = "right",
+    panel.grid.major.y = element_line(color = "gray80"))
+```
 
 After finalizing your summary paragraph, paste it in the section below:
 
